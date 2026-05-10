@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Regenerator — HTML/CSS/JS Single File</title>
+  <style>
+    :root{
+      --bg: #0f1724;
+      --card: #0b1220;
+      --muted: #9aa4b2;
+      --accent: #7c3aed;
+      --glass: rgba(255,255,255,0.04);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+      background:linear-gradient(180deg,var(--bg),#061022);
+      color:#e6eef6;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:28px;
+    }
+    .wrap{
+      width:100%;
+      max-width:980px;
+      display:grid;
+      grid-template-columns:1fr 380px;
+      gap:22px;
+    }
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:12px;
+      padding:18px;
+      box-shadow:0 6px 30px rgba(2,6,23,0.6);
+      border:1px solid rgba(255,255,255,0.03);
+    }
+    header.h{
+      display:flex;align-items:center;gap:12px
+    }
+    h1{margin:0;font-size:20px}
+    p.lead{color:var(--muted);margin:8px 0 14px}
+
+    /* preview area */
+    .preview{
+      min-height:360px;
+      border-radius:10px;
+      padding:18px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
+      display:flex;flex-direction:column;gap:12px;
+    }
+    .sample-card{
+      border-radius:10px;padding:14px;background:var(--glass);
+      border:1px solid rgba(255,255,255,0.03);
+    }
+    .meta{font-size:13px;color:var(--muted)}
+    .controls{display:flex;gap:8px;flex-wrap:wrap}
+    button{background:var(--accent);border:0;padding:10px 14px;border-radius:8px;color:white;cursor:pointer;font-weight:600}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06)}
+    .small{padding:8px 10px;font-size:13px}
+
+    pre.code{
+      background:#071226;padding:12px;border-radius:8px;overflow:auto;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'Courier New', monospace;font-size:13px
+    }
+
+    label{font-size:13px;color:var(--muted)}
+    .sidebar{display:flex;flex-direction:column;gap:12px}
+
+    @media (max-width:900px){
+      .wrap{grid-template-columns:1fr;}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <h1>Regenerator</h1>
+          <p class="lead">Click <strong>Regenerate</strong> to create a new random sample UI + code snippet (HTML &amp; CSS). Useful for rapid design exploration.</p>
+        </div>
+        <div class="controls">
+          <button id="regen">Regenerate</button>
+          <button id="copy" class="ghost small">Copy HTML</button>
+        </div>
+      </div>
+
+      <div class="preview" id="preview">
+        <!-- dynamic preview content injected here -->
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="meta">Pattern: <span id="patternName">—</span> · Palette: <span id="paletteName">—</span></div>
+      </div>
+    </div>
+
+    <aside class="card sidebar">
+      <div>
+        <label>Options</label>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <select id="mode">
+            <option value="ui">UI Sample</option>
+            <option value="card">Profile Card</option>
+            <option value="banner">Banner</option>
+            <option value="blog">Blog Teaser</option>
+          </select>
+          <button id="regenSmall" class="small ghost">Quick</button>
+        </div>
+      </div>
+
+      <div>
+        <label>Generated HTML/CSS</label>
+        <pre class="code" id="codeBlock">/* generated code will appear here */</pre>
+      </div>
+
+      <div>
+        <label>Notes</label>
+        <p class="meta">Each regenerate produces a different layout, color palette, and sample text. Use <em>Copy HTML</em> to paste into a file.</p>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    // small collection of sample palettes and patterns
+    const palettes = [
+      {name:'Aurora', bg:'#061026', primary:'#7c3aed', accent:'#06b6d4', muted:'#9aa4b2'},
+      {name:'Sunset', bg:'#24121e', primary:'#ff7a59', accent:'#ffd166', muted:'#f0c2b8'},
+      {name:'Forest', bg:'#071b12', primary:'#16a34a', accent:'#7dd3fc', muted:'#9fb9a8'},
+      {name:'Midnight', bg:'#050816', primary:'#5b8def', accent:'#a78bfa', muted:'#97a3d1'}
+    ];
+
+    const patterns = ['Glass Card','Hero Banner','Profile Stack','Blog Teaser','Feature Tiles'];
+
+    function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+    function rndInt(max){return Math.floor(Math.random()*max)}
+
+    function generate(mode){
+      const pal = rand(palettes);
+      const pattern = rand(patterns);
+      // set meta
+      document.getElementById('paletteName').textContent = pal.name;
+      document.getElementById('patternName').textContent = pattern;
+
+      // build preview HTML
+      const preview = document.getElementById('preview');
+      preview.innerHTML = '';
+
+      // apply palette to root for visual match
+      document.documentElement.style.setProperty('--bg', pal.bg);
+      document.documentElement.style.setProperty('--accent', pal.primary);
+      document.documentElement.style.setProperty('--muted', pal.muted);
+
+      if(mode === 'card' || (mode==='ui' && Math.random()>0.5)){
+        const html = `
+          <div class="sample-card">
+            <div style="display:flex;gap:12px;align-items:center">
+              <div style="width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg, ${pal.primary}, ${pal.accent});display:flex;align-items:center;justify-content:center;font-weight:700">A</div>
+              <div>
+                <div style="font-weight:700">Alex Morissette</div>
+                <div style="font-size:13px;color:var(--muted)">Senior Designer · Example Co.</div>
+              </div>
+            </div>
+            <p style="margin-top:10px;color:var(--muted)">A compact profile card that mixes vibrant gradients with subtle glassmorphism — perfect for quick prototypes.</p>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="small">Follow</button>
+              <button class="small ghost">Message</button>
+            </div>
+          </div>
+        `;
+        preview.innerHTML = html;
+        buildCode('card', pal, pattern);
+        return;
+      }
+
+      if(mode === 'banner' || (mode==='ui' && Math.random()>0.5)){
+        const html = `
+          <div style="background:linear-gradient(90deg, ${pal.primary}, ${pal.accent});padding:18px;border-radius:10px">
+            <h2 style="margin:0">Launch your product</h2>
+            <p style="margin:6px 0 0;color:rgba(255,255,255,0.9)">One line of copy that explains the top value prop. Regenerate for variations.</p>
+            <div style="margin-top:12px;display:flex;gap:8px">
+              <button>Get started</button>
+              <button class="ghost">Docs</button>
+            </div>
+          </div>
+        `;
+        preview.innerHTML = html;
+        buildCode('banner', pal, pattern);
+        return;
+      }
+
+      // default: feature tiles / blog
+      const items = Array.from({length:3},(_,i)=>`
+        <div style="padding:12px;border-radius:8px;background:rgba(255,255,255,0.02)">
+          <div style="font-weight:700">Feature ${i+1}</div>
+          <div style="color:var(--muted);font-size:13px;margin-top:6px">Short description to explain the feature and why it matters.</div>
+        </div>
+      `).join('');
+
+      preview.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">${items}</div>`;
+      buildCode('tiles', pal, pattern);
+    }
+
+    function buildCode(type, pal, pattern){
+      // produce a simple HTML/CSS snippet matching the preview (kept simple on purpose)
+      const code = `<!-- Regenerated sample: ${pattern} -->\n<div class=\"sample\">\n  <!-- Styles are inline for copy/paste convenience -->\n  <style>\n    .sample{font-family:Inter, system-ui, Arial;}\n    .sample .btn{padding:10px 14px;border-radius:8px;border:0;background:${pal.primary};color:white;font-weight:700}\n  </style>\n\n  <!-- Content -->\n  ${type==='card' ? `\n  <div style=\"display:flex;gap:12px;align-items:center;\">\n    <div style=\"width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg, ${pal.primary}, ${pal.accent});display:flex;align-items:center;justify-content:center;font-weight:700\">A</div>\n    <div>\n      <div style=\"font-weight:700\">Alex Morissette</div>\n      <div style=\"font-size:13px;color:${pal.muted}\">Senior Designer · Example Co.</div>\n    </div>\n  </div>\n  <p style=\"color:${pal.muted}\">A compact profile card good for prototypes.</p>\n  <div style=\"display:flex;gap:8px\">\n    <button class=\"btn\">Follow</button>\n    <button class=\"btn\" style=\"background:transparent;border:1px solid rgba(255,255,255,0.06)\">Message</button>\n  </div>` : type==='banner' ? `\n  <div style=\"background:linear-gradient(90deg, ${pal.primary}, ${pal.accent});padding:18px;border-radius:10px\">\n    <h2 style=\"margin:0\">Launch your product</h2>\n    <p style=\"margin:6px 0 0;color:rgba(255,255,255,0.9)\">One line of copy that explains the top value prop.</p>\n    <div style=\"margin-top:12px;display:flex;gap:8px\">\n      <button class=\"btn\">Get started</button>\n      <button class=\"btn\" style=\"background:transparent;border:1px solid rgba(255,255,255,0.06)\">Docs</button>\n    </div>\n  </div>` : `\n  <div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px\">\n    <div style=\"padding:12px;border-radius:8px;background:rgba(255,255,255,0.02)\">\n      <div style=\"font-weight:700\">Feature 1</div>\n      <div style=\"color:${pal.muted};font-size:13px;margin-top:6px\">Short description for the feature.</div>\n    </div>\n    <div style=\"padding:12px;border-radius:8px;background:rgba(255,255,255,0.02)\">\n      <div style=\"font-weight:700\">Feature 2</div>\n      <div style=\"color:${pal.muted};font-size:13px;margin-top:6px\">Short description for the feature.</div>\n    </div>\n    <div style=\"padding:12px;border-radius:8px;background:rgba(255,255,255,0.02)\">\n      <div style=\"font-weight:700\">Feature 3</div>\n      <div style=\"color:${pal.muted};font-size:13px;margin-top:6px\">Short description for the feature.</div>\n    </div>\n  </div>`}
+</div>`;
+
+      document.getElementById('codeBlock').textContent = code;
+    }
+
+    // event wiring
+    document.getElementById('regen').addEventListener('click',()=>generate(document.getElementById('mode').value));
+    document.getElementById('regenSmall').addEventListener('click',()=>generate(document.getElementById('mode').value));
+
+    document.getElementById('copy').addEventListener('click',()=>{
+      const txt = document.getElementById('codeBlock').textContent;
+      navigator.clipboard.writeText(txt).then(()=>{
+        const b = document.getElementById('copy');
+        b.textContent='Copied!';
+        setTimeout(()=>b.textContent='Copy HTML',1200);
+      }).catch(()=>alert('Copy failed — your browser may block clipboard access.'));
+    });
+
+    // initial render
+    generate('ui');
+  </script>
+</body>
+</html>
